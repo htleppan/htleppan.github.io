@@ -1,0 +1,61 @@
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Headlines Turbo</title>
+<style>
+        body {
+                max-width: 600px;
+
+        }
+}
+</style>
+</head>
+<body>
+<h1>Headlines Turbo</h1>
+
+<p> Headlines Turbo was a news reader app that downloaded news articles 
+from multiple sources, grouped them by content similarity, and displayed 
+them to the user in a compact view. The aim was to provide fast 
+access to relevant news topics, in which the relevancy was determined by 
+the popularity of the topic across multiple sources. Secondary objective 
+was to bring multiple viewpoints of politically biased topics in the 
+same view, which was useful especially when reading the U.S. newsphere.
+
+<p>
+<img src="hl_main.png">
+<img src="hl_cluster.png">
+<img src="hl_article.png">
+<p>
+
+A clustering algorithm was developed that was transparent to language, 
+i.e. the algorithm did not use pre-programmed stop words or stemming 
+that were commonly used in other algorithms. This made the scaling of the app to other 
+languages practically effortless. 
+
+
+<p>
+<img src="hl_feedlists.png">
+<img src="hl_manage_feedlists.png">
+
+<p>
+
+The app was written in Objective-C, with the algorithm being prototyped 
+in Python. Especially challenging was to optimize the algorithm performance 
+such that it would run smoothly on a mobile device. If I recall 
+correctly, the total clustering time was brought from initial 1-2 minutes to 
+less than a second by using CPU caching and C++ in the critical parts.
+
+<p>
+<img src="hl_ipad.png">
+
+<p>
+
+The app was available in App Store in 2013 - 2017 but removed due to not 
+being a commercial success. Also, updating to later iOS versions would 
+have required substantial amount of time and effort.
+
+<p>
+
+
+</body>
+</html>

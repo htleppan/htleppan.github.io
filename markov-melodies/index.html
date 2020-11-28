@@ -1,0 +1,288 @@
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Markov melodies</title>
+<style>
+	body {
+		max-width: 800px;
+
+	}
+	#transtable, #transtable tr, #transtable td {
+		border: 1px solid black;
+		border-collapse: collapse;
+		padding: 3px;
+		background-color: #ffffff;
+	}
+}
+
+</style>
+</head>
+<body>
+<h1>Music from the probabilistic event machine</h2>
+<div style = "display:flex; flex-direction: row; flex-wrap: wrap; align-items: center;">
+<div>
+	<select id = "selectsong">
+		<option value="tetris.json">Tetris</option>
+	  	<option value="amelie.json">Amelie</option>
+  		<option value="xmas.json">X-Mas</option>
+	</select>
+</div>
+<div>
+<button id = "playbutton" disabled>Play</button>
+</div>
+<div><button id = "stopbutton" disabled>Stop</button></div>
+<div><img id = "spinner" src = "spin.gif"></div>
+</div>
+</div>
+<br>
+<div>
+<canvas id = "pianocanvas" width="640" height="64"></canvas><br>
+<br><br>
+
+<a href="https://en.wikipedia.org/wiki/Markov_chain">Markov chains</a> are random processes in which the probability of an event depends only on the previous event. An example of a three-state Markov process:<br><br>
+<div style="display:flex; width:100%; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content:space-around;" >
+<div><img src="markov_example_diagram.png" width = 300px></div>
+<div>Transition table:
+<table id = "transtable">
+	<tr><td colspan="2" rowspan="2"></td><td colspan = "3"><center>Next</center></td></tr>
+	<tr><td><b>A</b></td><td><b>B</b></td><td><b>C</b></td></tr>
+	<tr><td rowspan="4">Prev<br>ious</td></tr>
+	<tr><td><b>A</b></td><td>0.3</td><td>0.0</td><td>0.7</td></tr>
+	<tr><td><b>B</b></td><td>0.8</td><td>0.0</td><td>0.2</td></tr>
+	<tr><td><b>C</b></td><td>0.0</td><td>0.5</td><td>0.5</td></tr>
+</table>
+</div>
+<div>
+<br>Example event sequence:
+	<pre>ACCCBACCCCCBAAACCBACCCCCCBACCCCBACCCCC...</pre>
+</div>
+</div>
+<p>
+Music can be thought as Markov chains, with notes or chords being probabilistic events. When a guitarist is improvising a solo, his choice for the next note depends on the previous notes by some probabilities he has adopted during years of training and listening. Such learned transition tables may be different for different styles and scales, the events may be relative actions instead of absolute points, and the state memory can be deeper than one level, or the depth can even be drawn from a random process itself. But even in this most simplest 1-depth case, I think a Markov chain can produce surprisingly pleasant results given good learning data.
+<p>
+In the demo above, I took some MIDI files, grouped notes to chords and extracted the chord-level transition probabilities for three selected cases. The probabilistic event in this case is a chord consisting of notes and their shortest duration. The Python source for extracting chord transition probabilities from MIDI files is available at <a href="https://github.com/htleppan/markov-melodies">GitHub</a>.
+
+
+
+<script src="Tone.js"></script>
+<script type="text/javascript">
+var songdata = 0;
+
+var getJSON = function(url, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'json';
+    xhr.onload = function() {
+      var status = xhr.status;
+      if (status === 200) {
+        callback(null, xhr.response);
+      } else {
+        callback(status, xhr.response);
+      }
+    };
+    xhr.send();
+};
+
+document.getElementById("selectsong").onchange = function() {
+   var playstate = playing;
+   playing = false;
+   var x = document.getElementById("selectsong").value;
+   getJSON(x, function(err, data) {
+  	if (err !== null) {
+    	console.log('Could not load json: ' + err);
+  	} else {
+  		songdata = data;
+  		playing = playstate;
+  	}
+	});
+};
+
+
+getJSON("tetris.json", function(err, data) {
+  	if (err !== null) {
+    	console.log('Could not load json: ' + err);
+  	} else {
+  		songdata = data;
+  	}
+});
+
+
+function samplerReady() {
+	document.getElementById("playbutton").disabled = false;
+	document.getElementById("stopbutton").disabled = false;
+	document.getElementById("spinner").hidden = true;
+}
+
+var sampler = new Tone.Sampler({
+                        "A1" : "A1.mp3",
+                        "A2" : "A2.mp3",
+                        "A3" : "A3.mp3",
+                        "A4" : "A4.mp3",
+                        "A5" : "A5.mp3",
+                        "A6" : "A6.mp3",
+
+                        "C1" : "C1.mp3",
+                        "C2" : "C2.mp3",
+                        "C3" : "C3.mp3",
+                        "C4" : "C4.mp3",
+                        "C5" : "C5.mp3",
+                        "C6" : "C6.mp3",
+                        
+                        "D#1" : "Ds1.mp3",
+                        "D#2" : "Ds2.mp3",
+                        "D#3" : "Ds3.mp3",
+                        "D#4" : "Ds4.mp3",
+                        "D#5" : "Ds5.mp3",
+                        "D#6" : "Ds6.mp3",
+                        
+                }, {
+                        "release" : 1,
+                        "baseUrl" : "audio/",
+                        "onload"  : samplerReady 
+                }).toMaster();
+var playing = false;
+
+document.getElementById('playbutton')?.addEventListener('click', async () => {
+	await Tone.start();
+	playing = true;
+	console.log('audio is ready');
+})
+document.getElementById('stopbutton')?.addEventListener('click', async () => {
+	console.log('stopped');
+	playing = false;
+})
+
+function midipitch_to_note(pitch) {
+	var notenames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+	var octave = Math.floor(pitch / 12);
+	var noteinoct = pitch % 12;
+	var pitch_str = notenames[noteinoct] + octave;
+	return pitch_str;
+}
+
+
+var canvas = document.getElementById('pianocanvas');
+var ctx = canvas.getContext('2d');
+if(window.innerWidth < 640)
+	ctx.canvas.width = window.innerWidth;
+
+class PianoNote {
+	constructor(note, bw, x, w, h) {
+		this.note = note;
+		this.bw = bw;
+		this.x = x;
+		this.w = w;
+		this.h = h;
+		this.green = 0;
+	} 
+	draw(ctx) {
+		if(this.bw)
+			ctx.fillStyle = 'rgb(0, '+Math.floor(this.green)+', 0)';
+		else
+			ctx.fillStyle = 'rgb('+(255 - Math.floor(this.green))+', 255, '+(255 - Math.floor(this.green))+')';
+		ctx.fillRect(this.x, 0, this.w, this.h);
+		ctx.strokeRect(this.x, 0, this.w, this.h);
+	}
+
+	update(dt) {
+		this.green -= 20 * dt * 0.025;
+		if(this.green < 0)
+			this.green = 0;
+	}
+
+}
+
+var bwnotes = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
+var notes_array = [];
+
+
+var num_octaves = 9;
+var octave_width = canvas.width / (num_octaves-1);
+var white_width = octave_width / 7;
+
+for(let octave = 1; octave < num_octaves; octave++) {
+	let x_offset = (octave  -1)* octave_width;
+	let whites = -1;
+	for(let i = 0; i < bwnotes.length; i++) {
+		whites += (1 - bwnotes[i]);
+		let x = x_offset + whites * white_width + (bwnotes[i] * white_width*0.75);
+		let w = white_width - (bwnotes[i] * white_width * 0.5);
+		let h = canvas.height - (bwnotes[i] * canvas.height * 0.4);
+		notes_array.push(new PianoNote(octave * 12 + i, bwnotes[i], x, w, h));
+	}
+}
+notes_array = notes_array.sort((a,b) => (a.bw - b.bw));
+
+for(let i = 0; i < notes_array.length; i++)
+	notes_array[i].draw(ctx);
+
+function sample(probs) {
+    const sum = probs.reduce((a, b) => a + b, 0)
+    if (sum <= 0) throw Error('probs must sum to a value greater than zero')
+    const normalized = probs.map(prob => prob / sum)
+    const sample = Math.random()
+    let total = 0
+    for (let i = 0; i < normalized.length; i++) {
+        total += normalized[i]
+        if (sample < total) return i
+    }
+}
+
+function fetch_next_chord(current_chord_idx) {
+	if (playing == false)
+		return
+	let probs = songdata[0]["transition_list"][current_chord_idx][1];
+	let chords = songdata[0]["transition_list"][current_chord_idx][0];
+	let index = sample(probs);
+	let next_chord = chords[index];
+
+	let notes = songdata[0]["chords"][next_chord]["notes"];
+	let frac = songdata[0]["chords"][next_chord]["fraction"];
+
+	for(let i = 0; i < notes.length; i++) 
+		try{
+		notes_array.find(x => x.note == notes[i]).green = 255;
+		} catch {console.log("Note outside visible octave range.")};
+
+	let notes_str = [];
+	for(let i = 0; i < notes.length; i++) {
+		notes_str.push(midipitch_to_note(notes[i]));
+	}
+	sampler.triggerAttackRelease(notes_str,  '1n'); //frac + 'n'); 	
+	let time_until_next_chord = songdata[0]["tempo"] * songdata[0]["signature"][1] / 1000 / frac;
+
+	return [next_chord, time_until_next_chord];
+}
+
+var lastTime = 0;
+var nextNoteTime = 0;
+var prevNoteTime = 0;
+var prevChord = 0;
+function loop(time) {
+    if ( (time - lastTime) < 60) {
+        requestAnimationFrame(loop);
+        return;
+    }
+
+    if(playing == true) {
+	    if( (time - prevNoteTime) > nextNoteTime) {
+			a = fetch_next_chord(prevChord)
+			nextNoteTime = a[1];
+			prevChord = a[0];
+			prevNoteTime = time;
+	    }
+	}	
+
+    for(let i = 0; i < notes_array.length; i++)
+    	notes_array[i].update(time - lastTime);
+    for(let i = 0; i < notes_array.length; i++) {
+    	notes_array[i].draw(ctx);
+    }
+    lastTime = time;
+    requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>
